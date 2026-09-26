@@ -651,5 +651,120 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '应收金额': 37.5,
   '已收金额': 37.5,
   '开票状态': '检测结算样例3',
-  '结算状态': '检测结算样例3'}]
+  '结算状态': '检测结算样例3'}],
 }
+
+
+def _visitor_seed_rows() -> None:
+    """访客登记与门禁通行的示例数据。
+
+    通行证的有效期相对服务启动时刻计算：始终保留一张可发放、一张生效中、
+    一张已过期未核销、一张已核销，方便演示刷卡放行、过期拒绝与重复核销。
+    """
+    from datetime import datetime, timedelta
+
+    def fmt(moment: datetime) -> str:
+        return moment.strftime("%Y-%m-%d %H:%M")
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    today = now.strftime("%Y-%m-%d")
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    def visit(
+        visit_id: int,
+        code: str,
+        status: str,
+        name: str,
+        company: str,
+        dept: str,
+        host_name: str,
+        reason: str,
+        visit_date: str,
+        arrive: str,
+        *,
+        approver: str | None = None,
+        comment: str = "",
+        pending: bool | None = None,
+        abnormal: bool | None = None,
+    ) -> dict[str, Any]:
+        row: dict[str, Any] = {
+            "id": visit_id,
+            "status": status,
+            "pending": status == "待审批" if pending is None else pending,
+            "abnormal": status == "已驳回" if abnormal is None else abnormal,
+            "来访编号": code,
+            "访客姓名": name,
+            "来访单位": company,
+            "联系方式": "1390000%03d" % visit_id,
+            "证件号": "3101001990%04dXXXX" % visit_id,
+            "受访部门": dept,
+            "被访人": host_name,
+            "来访事由": reason,
+            "来访日期": visit_date,
+            "到访时间": arrive,
+            "登记人": "王敏（前台）",
+            "登记时间": f"{visit_date} 08:05",
+            "审批人": approver or "",
+            "审批意见": comment,
+        }
+        return row
+
+    SEED_ROWS["visitor"] = [
+        visit(1, "VIS-0001", "已批准", "王明", "华测校准科技有限公司", "化学分析部", "张伟", "参观气相色谱实验室并洽谈仪器校准合作", today, "09:30", approver="张伟（化学分析部）", comment="同意来访，已安排接待"),
+        visit(2, "VIS-0002", "待审批", "刘洋", "市生态环境监测站", "微生物检测部", "李娜", "送检水样并确认微生物检测方案", today, "10:00"),
+        visit(3, "VIS-0003", "待审批", "赵敏", "安谱耗材供应商", "化学分析部", "张伟", "试剂耗材年度采购入库对接", today, "14:00"),
+        visit(4, "VIS-0004", "已批准", "孙磊", "兄弟实验室参观团", "仪器分析部", "陈强", "参加高效液相色谱仪操作交流", today, "13:30", approver="陈强（仪器分析部）", comment="欢迎交流，仅限仪器分析区"),
+        visit(5, "VIS-0005", "已驳回", "周倩", "第三方设备维保单位", "微生物检测部", "李娜", "生物安全柜年度维保", today, "15:00", approver="李娜（微生物检测部）", comment="未提前预约，建议改约后重新登记", pending=False, abnormal=True),
+        visit(6, "VIS-0006", "已核销", "吴芳", "资质认定评审组", "化学分析部", "张伟", "CMA 复评审现场核查", today, "08:30", approver="张伟（化学分析部）", comment="评审专家，全程陪同", pending=False),
+        visit(7, "VIS-0007", "已批准", "郑涛", "顺达气体配送", "化学分析部", "张伟", "递送标准气体钢瓶", today, "09:00", approver="张伟（化学分析部）", comment="在样品交接区交接"),
+        visit(8, "VIS-0008", "已核销", "冯雪", "理工大学环境学院", "仪器分析部", "陈强", "暑期见习交流", yesterday, "14:00", approver="陈强（仪器分析部）", comment="见习已结束", pending=False),
+    ]
+
+    def pass_row(
+        pass_id: int,
+        code: str,
+        visit_id_ref: int,
+        name: str,
+        dept: str,
+        issued: datetime,
+        valid_from: datetime,
+        valid_until: datetime,
+        *,
+        checked_out: datetime | None = None,
+        point: str = "东门访客通道",
+    ) -> dict[str, Any]:
+        return {
+            "id": pass_id,
+            "status": "已核销" if checked_out else "通行中",
+            "pending": checked_out is None and valid_until > now,
+            "abnormal": checked_out is None and valid_until <= now,
+            "通行证号": code,
+            "来访编号": "VIS-%04d" % visit_id_ref,
+            "访客姓名": name,
+            "受访部门": dept,
+            "门禁点": point,
+            "发证时间": fmt(issued),
+            "有效开始": fmt(valid_from),
+            "有效截止": fmt(valid_until),
+            "核销时间": fmt(checked_out) if checked_out else "",
+            "核销人": "赵刚（门禁管理员）" if checked_out else "",
+        }
+
+    SEED_ROWS["pass"] = [
+        # 孙磊：生效中的通行证
+        pass_row(1, "PASS-0001", 4, "孙磊", "仪器分析部", now - timedelta(minutes=30), now - timedelta(minutes=30), now + timedelta(hours=4)),
+        # 吴芳：已核销（核销时仍有效）
+        pass_row(2, "PASS-0002", 6, "吴芳", "化学分析部", now - timedelta(hours=3), now - timedelta(hours=3), now - timedelta(hours=1), checked_out=now - timedelta(hours=1)),
+        # 郑涛：已过期且未核销——刷卡必须拒绝
+        pass_row(3, "PASS-0003", 7, "郑涛", "化学分析部", now - timedelta(hours=3), now - timedelta(hours=3), now - timedelta(minutes=30)),
+    ]
+
+    SEED_ROWS["access_log"] = [
+        {"id": 1, "status": "正常", "pending": False, "abnormal": False, "通行证号": "PASS-0001", "访客姓名": "孙磊", "门禁点": "东门访客通道", "刷卡时间": fmt(now - timedelta(minutes=20)), "结果": "放行", "说明": "通行证在有效期内"},
+        {"id": 2, "status": "正常", "pending": False, "abnormal": False, "通行证号": "PASS-0002", "访客姓名": "吴芳", "门禁点": "东门访客通道", "刷卡时间": fmt(now - timedelta(hours=2, minutes=50)), "结果": "放行", "说明": "通行证在有效期内"},
+        {"id": 3, "status": "正常", "pending": False, "abnormal": False, "通行证号": "PASS-0003", "访客姓名": "郑涛", "门禁点": "东门访客通道", "刷卡时间": fmt(now - timedelta(hours=2, minutes=50)), "结果": "放行", "说明": "通行证在有效期内"},
+        {"id": 4, "status": "异常", "pending": False, "abnormal": True, "通行证号": "PASS-0003", "访客姓名": "郑涛", "门禁点": "东门访客通道", "刷卡时间": fmt(now - timedelta(minutes=10)), "结果": "拒绝", "说明": "通行证已超过有效截止时间"},
+    ]
+
+
+_visitor_seed_rows()

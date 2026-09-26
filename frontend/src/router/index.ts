@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import Dashboard from '@/views/Dashboard.vue'
+const Visitor = () => import('@/views/visitor/index.vue')
+const Access = () => import('@/views/access/index.vue')
 const Sample = () => import('@/views/sample/index.vue')
 const Client = () => import('@/views/client/index.vue')
 const Project = () => import('@/views/project/index.vue')
@@ -24,6 +26,8 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'dashboard', component: Dashboard },
+    { path: '/visitor', name: 'visitor', component: Visitor },
+    { path: '/access', name: 'access', component: Access },
     { path: '/sample', name: 'sample', component: Sample },
     { path: '/client', name: 'client', component: Client },
     { path: '/project', name: 'project', component: Project },
