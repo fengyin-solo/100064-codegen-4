@@ -244,3 +244,29 @@ class SettlementEntry(BaseModel):
     field_5: str | None = None  # 已收金额
     field_6: str | None = None  # 开票状态
     field_7: str | None = None  # 结算状态
+
+
+class VisitorEntry(BaseModel):
+    """访客登记明细结构。"""
+
+    field_0: str | None = None  # 访客编号
+    field_1: str | None = None  # 访客姓名
+    field_2: str | None = None  # 访客单位
+    field_3: str | None = None  # 受访部门
+    field_4: str | None = None  # 被访人
+    field_5: str | None = None  # 来访事由
+    field_6: str | None = None  # 来访日期
+    field_7: str | None = None  # 审批状态
+
+
+class VisitorPassEntry(BaseModel):
+    """访客通行证明细结构。"""
+
+    field_0: str | None = None  # 通行证编号
+    field_1: str | None = None  # 访客姓名
+    field_2: str | None = None  # 受访部门
+    field_3: str | None = None  # 生效时间
+    field_4: str | None = None  # 失效时间
+    field_5: str | None = None  # 核销时间
+    field_6: str | None = None  # 发放人
+    field_7: str | None = None  # 通行证状态

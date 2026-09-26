@@ -5,10 +5,12 @@
 """
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.errors import VisitorError
 from app.routers import ROUTERS
 from app.store import store
 
@@ -21,6 +23,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(VisitorError)
+def visitor_error_handler(request: Request, exc: VisitorError) -> JSONResponse:
+    """把访客模块的受控错误翻译成带状态码的 JSON，越权等场景由这里统一拒绝。"""
+    return JSONResponse(status_code=exc.status_code, content={"ok": False, "message": exc.message})
+
 
 for module in ROUTERS:
     app.include_router(module.router)
